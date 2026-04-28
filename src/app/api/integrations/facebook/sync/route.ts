@@ -22,31 +22,40 @@ export async function POST(req: NextRequest) {
     let fbError = null;
     let igError = null;
 
-    // 1. Fetch Facebook Comments
+    // 1. Fetch Facebook Posts and Comments
     try {
-      const fbComments = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
-      allNormalizedInteractions.push(...fbComments.map((c: any) => ({
+      // fetchFacebookComments now returns an expanded list including the posts themselves
+      const fbData = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
+      allNormalizedInteractions.push(...fbData.map((item: any) => ({
         platform: "facebook",
-        externalId: c.id,
-        customer: { name: "FB User" },
-        content: { text: c.message, mediaType: "text" as const },
-        createdAt: c.created_time
+        externalId: item.id,
+        customer: { name: item.from?.name || "FB User" },
+        content: { 
+          text: item.message || "[Media Post]", 
+          mediaType: "text" as const,
+          permalink: item.permalink_url 
+        },
+        createdAt: item.created_time
       })));
     } catch (e: any) {
       fbError = e.response?.data?.error?.message || e.message;
       console.error("FB Sync Partial Failure:", fbError);
     }
 
-    // 2. Fetch Instagram Comments (if linked)
+    // 2. Fetch Instagram Media and Comments
     if (credential.selectedInstagramId) {
       try {
-        const igComments = await fetchInstagramComments(credential.selectedInstagramId, selectedPage.accessToken);
-        allNormalizedInteractions.push(...igComments.map((c: any) => ({
+        const igData = await fetchInstagramComments(credential.selectedInstagramId, selectedPage.accessToken);
+        allNormalizedInteractions.push(...igData.map((item: any) => ({
           platform: "instagram",
-          externalId: c.id,
-          customer: { name: c.username || "IG User" },
-          content: { text: c.text, mediaType: "text" as const },
-          createdAt: c.timestamp
+          externalId: item.id,
+          customer: { name: item.username || "IG User" },
+          content: { 
+            text: item.text || item.caption || "[Instagram Post]", 
+            mediaType: "text" as const,
+            permalink: item.permalink 
+          },
+          createdAt: item.timestamp
         })));
       } catch (e: any) {
         igError = e.response?.data?.error?.message || e.message;
@@ -54,7 +63,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Success if we reached here without a CRITICAL error, even if 0 items found
+    // 3. Process and Save
     let savedCount = 0;
     for (const item of allNormalizedInteractions) {
       const existing = await Interaction.findOne({ externalId: item.externalId });
@@ -84,7 +93,6 @@ export async function POST(req: NextRequest) {
     credential.lastSyncAt = new Date();
     await credential.save();
 
-    // If we have an error but also found data, we still count it as a partial success
     return NextResponse.json({ 
       success: true, 
       count: allNormalizedInteractions.length,

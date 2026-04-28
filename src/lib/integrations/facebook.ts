@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_VERSION = "v17.0";
+const API_VERSION = "v16.0"; // Most stable for development apps
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
@@ -8,6 +8,8 @@ export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
     "pages_show_list",
     "pages_read_engagement",
     "pages_manage_metadata",
+    "pages_read_user_content",
+    "pages_manage_engagement",
     "instagram_basic",
     "instagram_manage_comments",
     "business_management"
@@ -57,58 +59,59 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // Use expanded field fetching to get comments in the same call as posts
-  // This is much more permission-friendly
   const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/feed`, {
     params: {
       access_token: pageAccessToken,
-      fields: "id,message,created_time,permalink_url,comments{id,message,created_time}",
-      limit: 25
+      fields: "id,message,created_time,permalink_url,comments{id,message,created_time,from}",
+      limit: 100 // Look back 100 posts
     }
   });
 
   const posts = res.data.data || [];
-  const allComments: any[] = [];
+  const results: any[] = [];
 
   for (const post of posts) {
+    // 1. Add the post itself
+    results.push(post);
+
+    // 2. Add all comments on this post
     if (post.comments && post.comments.data) {
-      allComments.push(...post.comments.data.map((c: any) => ({
+      results.push(...post.comments.data.map((c: any) => ({
         ...c,
-        postId: post.id,
-        postMessage: post.message,
-        permalink: post.permalink_url,
-        platform: "facebook"
+        permalink_url: post.permalink_url,
+        isComment: true
       })));
     }
   }
 
-  return allComments;
+  return results;
 };
 
 export const fetchInstagramComments = async (instagramId: string, pageAccessToken: string) => {
-  // Use expanded field fetching for Instagram too
   const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${instagramId}/media`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,caption,permalink,timestamp,comments{id,text,username,timestamp}",
-      limit: 25
+      limit: 100 // Look back 100 items
     }
   });
 
   const mediaList = res.data.data || [];
-  const allComments: any[] = [];
+  const results: any[] = [];
 
   for (const media of mediaList) {
+    // 1. Add the media (post) itself
+    results.push(media);
+
+    // 2. Add all comments on this media
     if (media.comments && media.comments.data) {
-      allComments.push(...media.comments.data.map((c: any) => ({
+      results.push(...media.comments.data.map((c: any) => ({
         ...c,
-        mediaId: media.id,
-        caption: media.caption,
         permalink: media.permalink,
-        platform: "instagram"
+        isComment: true
       })));
     }
   }
 
-  return allComments;
+  return results;
 };
