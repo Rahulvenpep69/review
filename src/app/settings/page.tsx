@@ -1,65 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { 
+  CheckCircle2, 
+  AlertCircle, 
+  RefreshCw, 
+  Settings2, 
   Globe, 
   Camera, 
-  MessageSquare, 
-  Link as LinkIcon, 
-  ShieldCheck, 
-  CheckCircle2,
-  AlertCircle
+  MessageCircle,
+  HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 
 export default function SettingsPage() {
   const [integrations, setIntegrations] = useState([
-    { 
+    {
       id: "google",
-      name: "Google Business Profile", 
-      icon: Globe, 
-      color: "text-blue-500", 
+      name: "Google Business Profile",
+      description: "Sync reviews and ratings from all your locations.",
+      icon: <Globe className="w-6 h-6 text-blue-400" />,
       status: "disconnected",
-      desc: "Sync reviews and ratings from all your locations."
     },
-    { 
+    {
       id: "facebook",
-      name: "Facebook Pages", 
-      icon: Globe, 
-      color: "text-blue-600", 
+      name: "Facebook Pages",
+      description: "Monitor comments and reviews on your FB posts.",
+      icon: <Globe className="w-6 h-6 text-blue-600" />,
       status: "disconnected",
-      desc: "Monitor comments and reviews on your FB posts."
     },
-    { 
+    {
       id: "instagram",
-      name: "Instagram Business", 
-      icon: Camera, 
-      color: "text-pink-500", 
-      status: "connected",
-      desc: "Engage with Reel and Post comments automatically."
-    },
-    { 
-      id: "tiktok",
-      name: "TikTok Business", 
-      icon: MessageSquare, 
-      color: "text-rose-500", 
+      name: "Instagram Business",
+      description: "Engage with Reel and Post comments automatically.",
+      icon: <Camera className="w-6 h-6 text-pink-500" />,
       status: "disconnected",
-      desc: "Track mentions and comments on your TikTok videos."
+    },
+    {
+      id: "tiktok",
+      name: "TikTok Business",
+      description: "Track mentions and comments on your TikTok videos.",
+      icon: <MessageCircle className="w-6 h-6 text-rose-500" />,
+      status: "disconnected",
     },
   ]);
 
+  const [isLoadingLocs, setIsLoadingLocs] = useState(false);
   const [googleLocations, setGoogleLocations] = useState<any[]>([]);
   const [selectedLoc, setSelectedLoc] = useState("");
-  const [isLoadingLocs, setIsLoadingLocs] = useState(false);
-  const [isRateLimited, setIsRateLimited] = useState(false);
+
+  const [isLoadingMeta, setIsLoadingMeta] = useState(false);
   const [metaPages, setMetaPages] = useState<any[]>([]);
   const [selectedMetaPage, setSelectedMetaPage] = useState("");
-  const [isLoadingMeta, setIsLoadingMeta] = useState(false);
+  const [selectedInstagram, setSelectedInstagram] = useState("");
 
   const fetchLocations = async () => {
     setIsLoadingLocs(true);
-    setIsRateLimited(false);
     try {
       const res = await axios.get("/api/integrations/google/locations?tenantId=tenant_1");
       const locs = res.data.locations || [];
@@ -70,12 +67,7 @@ export default function SettingsPage() {
       setIntegrations(prev => prev.map(item => 
         item.id === "google" ? { ...item, status: isConnected ? "connected" : "disconnected" } : item
       ));
-    } catch (e: any) {
-      if (e.response?.status === 429) {
-        setIsRateLimited(true);
-      }
-      const errMsg = e.response?.data?.error || e.message;
-      console.error("Failed to fetch locations:", errMsg);
+    } catch (e) {
       setIntegrations(prev => prev.map(item => 
         item.id === "google" ? { ...item, status: "disconnected" } : item
       ));
@@ -108,6 +100,7 @@ export default function SettingsPage() {
       const res = await axios.get("/api/integrations/facebook/pages?tenantId=tenant_1");
       setMetaPages(res.data.pages || []);
       setSelectedMetaPage(res.data.selectedPageId || "");
+      setSelectedInstagram(res.data.selectedInstagramId || "");
       
       const isConnected = res.data.connected;
       setIntegrations(prev => prev.map(item => 
@@ -118,18 +111,22 @@ export default function SettingsPage() {
     } catch (e) { console.error(e); } finally { setIsLoadingMeta(false); }
   };
 
-  const handleMetaPageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const pageId = e.target.value;
-    const selected = metaPages.find(p => p.id === pageId);
-    if (!selected) return;
+  const handleMetaSelect = async (type: "facebook" | "instagram", value: string) => {
     try {
-      await axios.post("/api/integrations/facebook/pages", {
-        tenantId: "tenant_1",
-        pageId: pageId,
-        instagramId: selected.instagramId
-      });
-      setSelectedMetaPage(pageId);
-      alert("Social accounts linked!");
+      const payload: any = { tenantId: "tenant_1" };
+      if (type === "facebook") {
+        payload.pageId = value;
+        payload.instagramId = selectedInstagram; // keep existing
+      } else {
+        payload.pageId = selectedMetaPage; // keep existing
+        payload.instagramId = value;
+      }
+
+      await axios.post("/api/integrations/facebook/pages", payload);
+      if (type === "facebook") setSelectedMetaPage(value);
+      else setSelectedInstagram(value);
+      
+      alert(`${type === "facebook" ? "Facebook Page" : "Instagram Account"} updated!`);
     } catch (e) { alert("Failed to link"); }
   };
 
@@ -164,15 +161,6 @@ export default function SettingsPage() {
     fetchConfig();
   }, []);
 
-  const toggleStatus = (id: string) => {
-    setIntegrations(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, status: item.status === "connected" ? "disconnected" : "connected" };
-      }
-      return item;
-    }));
-  };
-
   const handleConnect = async (id: string) => {
     const item = integrations.find(i => i.id === id);
     const isConnected = item?.status === "connected";
@@ -190,7 +178,6 @@ export default function SettingsPage() {
       return;
     }
 
-    // Connect Logic
     if (id === "google") {
       try {
         const res = await axios.get("/api/integrations/google/auth");
@@ -199,12 +186,10 @@ export default function SettingsPage() {
         alert("Check Google Auth settings");
       }
     } else if (id === "facebook" || id === "instagram") {
-      // Check if config exists first
       if (!metaConfig.appId || !metaConfig.appSecret) {
         setShowMetaModal(true);
         return;
       }
-
       try {
         const res = await axios.get("/api/integrations/facebook/auth?tenantId=tenant_1");
         if (res.data.url) window.location.href = res.data.url;
@@ -212,8 +197,6 @@ export default function SettingsPage() {
         alert(error.response?.data?.error || "Check Meta Auth settings");
         setShowMetaModal(true);
       }
-    } else {
-      toggleStatus(id);
     }
   };
 
@@ -253,49 +236,39 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="mt-8 flex gap-3">
+            <div className="flex gap-3 mt-8">
               <button 
                 onClick={() => setShowMetaModal(false)}
-                className="flex-1 px-6 py-3 rounded-xl text-sm font-bold bg-accent hover:bg-accent/80 transition-colors"
+                className="flex-1 px-6 py-3 rounded-xl border border-border hover:bg-accent transition-all font-bold text-sm"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleSaveConfig}
-                className="flex-1 px-6 py-3 rounded-xl text-sm font-bold bg-primary text-primary-foreground premium-gradient hover:opacity-90 transition-all"
+                className="flex-1 px-6 py-3 rounded-xl bg-primary text-primary-foreground premium-gradient font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
               >
-                Save & Continue
+                Save Credentials
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl shadow-black/20">
-        <div className="p-8 border-b border-border bg-accent/10">
-          <h3 className="text-xl font-bold font-outfit mb-2">Social Integrations</h3>
-          <p className="text-sm text-muted-foreground">Connect your brand's social presence to start aggregating feedback.</p>
-        </div>
+      <div className="bg-card border border-border rounded-[2.5rem] overflow-hidden shadow-2xl shadow-black/40">
         <div className="divide-y divide-border">
           {integrations.map((item) => (
-            <div key={item.id} className="p-8 flex items-center justify-between group hover:bg-accent/30 transition-colors">
+            <div key={item.id} className="p-8 flex items-center justify-between hover:bg-accent/10 transition-colors">
               <div className="flex items-center gap-6">
-                <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center">
-                  <item.icon className={cn("w-7 h-7", item.color)} />
+                <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center shadow-inner">
+                  {item.icon}
                 </div>
                 <div>
-                  <h4 className="font-bold text-lg">{item.name}</h4>
-                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                  <h3 className="text-xl font-bold font-outfit mb-1">{item.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
                   
                   {item.id === "google" && item.status === "connected" && (
                     <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
-                      {isRateLimited && (
-                        <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-amber-500 text-xs font-bold">
-                          <AlertCircle className="w-4 h-4" />
-                          Google Quota Exceeded. Retrying in 60s...
-                        </div>
-                      )}
-                      <p className="text-[10px] font-black uppercase text-primary mb-1.5 tracking-wider">Select Active Business</p>
+                      <p className="text-[10px] font-black uppercase text-primary mb-1.5 tracking-wider">Select Active Location</p>
                       <select 
                         value={selectedLoc}
                         onChange={handleLocationChange}
@@ -320,29 +293,34 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {(item.id === "facebook" || item.id === "instagram") && item.status === "connected" && (
+                  {item.id === "facebook" && item.status === "connected" && (
                     <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
-                      <p className="text-[10px] font-black uppercase text-primary mb-1.5 tracking-wider">Select Connected Page</p>
+                      <p className="text-[10px] font-black uppercase text-primary mb-1.5 tracking-wider">Select Facebook Page</p>
                       <select 
                         value={selectedMetaPage}
-                        onChange={handleMetaPageChange}
-                        disabled={isLoadingMeta}
-                        className="bg-accent/50 border border-border rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none w-full min-w-[240px] appearance-none cursor-pointer"
+                        onChange={(e) => handleMetaSelect("facebook", e.target.value)}
+                        className="bg-accent/50 border border-border rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none w-full min-w-[240px]"
                       >
-                        {isLoadingMeta ? (
-                          <option>Loading pages...</option>
-                        ) : metaPages.length > 0 ? (
-                          <>
-                            <option value="">-- Choose a Facebook Page --</option>
-                            {metaPages.map((p: any) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} {p.instagramId ? "(with Instagram)" : ""}
-                              </option>
-                            ))}
-                          </>
-                        ) : (
-                          <option>No pages found</option>
-                        )}
+                        <option value="">-- Choose Page --</option>
+                        {metaPages.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {item.id === "instagram" && item.status === "connected" && (
+                    <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
+                      <p className="text-[10px] font-black uppercase text-primary mb-1.5 tracking-wider">Select Instagram Account</p>
+                      <select 
+                        value={selectedInstagram}
+                        onChange={(e) => handleMetaSelect("instagram", e.target.value)}
+                        className="bg-accent/50 border border-border rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none w-full min-w-[240px]"
+                      >
+                        <option value="">-- Choose Account --</option>
+                        {metaPages.filter(p => p.instagramId).map(p => (
+                          <option key={p.instagramId} value={p.instagramId}>{p.name} (Instagram)</option>
+                        ))}
                       </select>
                     </div>
                   )}
@@ -353,44 +331,20 @@ export default function SettingsPage() {
                   <div className="flex flex-col gap-2">
                     <button 
                       onClick={async () => {
-                        const btn = document.activeElement as HTMLButtonElement;
-                        const originalText = btn.innerText;
-                        btn.innerText = "Syncing...";
-                        btn.disabled = true;
+                        const originalText = "Sync Real Data";
                         try {
                           const route = item.id === "google" ? "/api/integrations/google/sync" : "/api/integrations/facebook/sync";
-                          await axios.post(route, { tenantId: "tenant_1" });
-                          alert("Sync Complete!");
+                          const res = await axios.post(route, { tenantId: "tenant_1" });
+                          alert(`Sync Complete! Found ${res.data.count} items.`);
                           window.location.reload();
                         } catch (e: any) {
-                          const msg = e.response?.data?.error || e.message;
-                          alert(`Sync Failed: ${msg}`);
-                        } finally {
-                          btn.innerText = originalText;
-                          btn.disabled = false;
+                          alert(`Sync Failed: ${e.response?.data?.error || e.message}`);
                         }
                       }}
                       className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/20"
                     >
                       Sync Real Data
                     </button>
-                    {(item.id === "facebook" || item.id === "instagram") && (
-                      <button 
-                        onClick={() => setShowMetaModal(true)}
-                        className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hover:underline"
-                      >
-                        Edit API Keys
-                      </button>
-                    )}
-                  </div>
-                )}
-                {item.status === "connected" ? (
-                  <div className="flex items-center gap-2 text-emerald-500 font-bold text-sm bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-                    <CheckCircle2 className="w-4 h-4" /> Connected
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm bg-accent px-3 py-1.5 rounded-full border border-border">
-                    <AlertCircle className="w-4 h-4" /> Disconnected
                   </div>
                 )}
                 <button 
@@ -409,7 +363,6 @@ export default function SettingsPage() {
           ))}
         </div>
       </div>
-
     </div>
   );
 }
