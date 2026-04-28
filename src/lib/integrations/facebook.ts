@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_VERSION = "v15.0";
+const API_VERSION = "v12.0"; // Legacy version for maximum compatibility
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
@@ -58,15 +58,16 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // Use expanded request on the Page object itself
-  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/me`, {
+  // Using /posts instead of /feed in v12.0
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/posts`, {
     params: {
       access_token: pageAccessToken,
-      fields: "feed{id,message,created_time,permalink_url,comments{id,message,created_time,from}}"
+      fields: "id,message,created_time,permalink_url,comments{id,message,created_time,from}",
+      limit: 100
     }
   });
 
-  const posts = res.data.feed?.data || [];
+  const posts = res.data.data || [];
   const results: any[] = [];
 
   for (const post of posts) {
