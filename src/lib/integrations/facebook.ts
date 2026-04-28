@@ -1,10 +1,11 @@
 import axios from "axios";
 
-const API_VERSION = "v16.0";
+const API_VERSION = "v15.0";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
     "public_profile",
+    "email",
     "pages_show_list",
     "pages_read_engagement",
     "pages_manage_metadata",
@@ -57,18 +58,15 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // THE IDENTITY TRICK:
-  // Using "/me/feed" with a Page Access Token acts as the Page itself.
-  // This often bypasses the #10 Permission error for admins.
-  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/me/feed`, {
+  // Use expanded request on the Page object itself
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/me`, {
     params: {
       access_token: pageAccessToken,
-      fields: "id,message,created_time,permalink_url,comments{id,message,created_time,from}",
-      limit: 100
+      fields: "feed{id,message,created_time,permalink_url,comments{id,message,created_time,from}}"
     }
   });
 
-  const posts = res.data.data || [];
+  const posts = res.data.feed?.data || [];
   const results: any[] = [];
 
   for (const post of posts) {
@@ -86,7 +84,6 @@ export const fetchFacebookComments = async (pageId: string, pageAccessToken: str
 };
 
 export const fetchInstagramComments = async (instagramId: string, pageAccessToken: string) => {
-  // For Instagram, we must use the ID, but we use the Page Token
   const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${instagramId}/media`, {
     params: {
       access_token: pageAccessToken,
