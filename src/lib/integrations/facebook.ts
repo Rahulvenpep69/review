@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_VERSION = "v16.0"; // Most stable for development apps
+const API_VERSION = "v16.0";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
@@ -59,11 +59,14 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/feed`, {
+  // THE IDENTITY TRICK:
+  // Using "/me/feed" with a Page Access Token acts as the Page itself.
+  // This often bypasses the #10 Permission error for admins.
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/me/feed`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,message,created_time,permalink_url,comments{id,message,created_time,from}",
-      limit: 100 // Look back 100 posts
+      limit: 100
     }
   });
 
@@ -71,10 +74,7 @@ export const fetchFacebookComments = async (pageId: string, pageAccessToken: str
   const results: any[] = [];
 
   for (const post of posts) {
-    // 1. Add the post itself
     results.push(post);
-
-    // 2. Add all comments on this post
     if (post.comments && post.comments.data) {
       results.push(...post.comments.data.map((c: any) => ({
         ...c,
@@ -88,11 +88,12 @@ export const fetchFacebookComments = async (pageId: string, pageAccessToken: str
 };
 
 export const fetchInstagramComments = async (instagramId: string, pageAccessToken: string) => {
+  // For Instagram, we must use the ID, but we use the Page Token
   const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${instagramId}/media`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,caption,permalink,timestamp,comments{id,text,username,timestamp}",
-      limit: 100 // Look back 100 items
+      limit: 100
     }
   });
 
@@ -100,10 +101,7 @@ export const fetchInstagramComments = async (instagramId: string, pageAccessToke
   const results: any[] = [];
 
   for (const media of mediaList) {
-    // 1. Add the media (post) itself
     results.push(media);
-
-    // 2. Add all comments on this media
     if (media.comments && media.comments.data) {
       results.push(...media.comments.data.map((c: any) => ({
         ...c,
