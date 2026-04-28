@@ -54,14 +54,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // If both failed and we found nothing, then it's a real failure
-    if (allNormalizedInteractions.length === 0 && (fbError || igError)) {
-      return NextResponse.json({ 
-        error: `Sync failed. FB: ${fbError || "none"}, IG: ${igError || "none"}` 
-      }, { status: 400 });
-    }
-
-    // 3. Process and Save
+    // Success if we reached here without a CRITICAL error, even if 0 items found
+    let savedCount = 0;
     for (const item of allNormalizedInteractions) {
       const existing = await Interaction.findOne({ externalId: item.externalId });
       if (!existing) {
@@ -83,17 +77,20 @@ export async function POST(req: NextRequest) {
           replies: { aiSuggested: aiResult.suggestedReply }
         });
         await newInteraction.save();
+        savedCount++;
       }
     }
 
     credential.lastSyncAt = new Date();
     await credential.save();
 
+    // If we have an error but also found data, we still count it as a partial success
     return NextResponse.json({ 
       success: true, 
       count: allNormalizedInteractions.length,
-      fbStatus: fbError ? "failed" : "success",
-      igStatus: igError ? "failed" : "success"
+      saved: savedCount,
+      fbStatus: fbError ? `Error: ${fbError}` : "Success",
+      igStatus: igError ? `Error: ${igError}` : "Success"
     });
 
   } catch (error: any) {

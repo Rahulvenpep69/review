@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const API_VERSION = "v17.0";
+
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
     "public_profile",
@@ -11,12 +13,11 @@ export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
     "business_management"
   ];
 
-  return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes.join(",")}&response_type=code`;
+  return `https://www.facebook.com/${API_VERSION}/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes.join(",")}&response_type=code`;
 };
 
 export const exchangeCodeForFacebookToken = async (code: string, appId: string, appSecret: string, redirectUri: string) => {
-  // 1. Exchange code for short-lived token
-  const tokenRes = await axios.get(`https://graph.facebook.com/v19.0/oauth/access_token`, {
+  const tokenRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/oauth/access_token`, {
     params: {
       client_id: appId,
       client_secret: appSecret,
@@ -27,8 +28,7 @@ export const exchangeCodeForFacebookToken = async (code: string, appId: string, 
 
   const shortToken = tokenRes.data.access_token;
 
-  // 2. Exchange for long-lived token (60 days)
-  const longTokenRes = await axios.get(`https://graph.facebook.com/v19.0/oauth/access_token`, {
+  const longTokenRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/oauth/access_token`, {
     params: {
       grant_type: "fb_exchange_token",
       client_id: appId,
@@ -41,7 +41,7 @@ export const exchangeCodeForFacebookToken = async (code: string, appId: string, 
 };
 
 export const fetchFacebookPages = async (userAccessToken: string) => {
-  const res = await axios.get(`https://graph.facebook.com/v19.0/me/accounts`, {
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/me/accounts`, {
     params: {
       access_token: userAccessToken,
       fields: "id,name,access_token,instagram_business_account"
@@ -57,72 +57,77 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // 1. Get latest posts
-  const postsRes = await axios.get(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+  // Try /posts instead of /feed for better compatibility in dev mode
+  const postsRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/posts`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,message,created_time,permalink_url",
-      limit: 10
+      limit: 25 // Increased depth
     }
   });
 
   const posts = postsRes.data.data || [];
   const allComments: any[] = [];
 
-  // 2. For each post, get comments
   for (const post of posts) {
-    const commentsRes = await axios.get(`https://graph.facebook.com/v19.0/${post.id}/comments`, {
-      params: {
-        access_token: pageAccessToken,
-        fields: "id,message,from,created_time",
-        limit: 50
-      }
-    });
+    try {
+      const commentsRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${post.id}/comments`, {
+        params: {
+          access_token: pageAccessToken,
+          fields: "id,message,created_time", // Extremely minimal fields
+          limit: 50
+        }
+      });
 
-    const comments = commentsRes.data.data || [];
-    allComments.push(...comments.map((c: any) => ({
-      ...c,
-      postId: post.id,
-      postMessage: post.message,
-      permalink: post.permalink_url,
-      platform: "facebook"
-    })));
+      const comments = commentsRes.data.data || [];
+      allComments.push(...comments.map((c: any) => ({
+        ...c,
+        postId: post.id,
+        postMessage: post.message,
+        permalink: post.permalink_url,
+        platform: "facebook"
+      })));
+    } catch (e) {
+       console.error(`Error fetching comments for post ${post.id}`);
+    }
   }
 
   return allComments;
 };
 
 export const fetchInstagramComments = async (instagramId: string, pageAccessToken: string) => {
-  // 1. Get latest media
-  const mediaRes = await axios.get(`https://graph.facebook.com/v19.0/${instagramId}/media`, {
+  const mediaRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${instagramId}/media`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,caption,media_type,media_url,permalink,timestamp",
-      limit: 10
+      limit: 25 // Increased depth
     }
   });
 
   const mediaList = mediaRes.data.data || [];
   const allComments: any[] = [];
 
-  // 2. For each media, get comments
   for (const media of mediaList) {
-    const commentsRes = await axios.get(`https://graph.facebook.com/v19.0/${media.id}/comments`, {
-      params: {
-        access_token: pageAccessToken,
-        fields: "id,text,username,timestamp",
-        limit: 50
-      }
-    });
+    try {
+      const commentsRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${media.id}/comments`, {
+        params: {
+          access_token: pageAccessToken,
+          fields: "id,text,username,timestamp",
+          limit: 50
+        }
+      });
 
-    const comments = commentsRes.data.data || [];
-    allComments.push(...comments.map((c: any) => ({
-      ...c,
-      mediaId: media.id,
-      caption: media.caption,
-      permalink: media.permalink,
-      platform: "instagram"
-    })));
+      const comments = commentsRes.data.data || [];
+      allComments.push(...comments.map((c: any) => ({
+        ...c,
+        mediaId: media.id,
+        caption: media.caption,
+        permalink: media.permalink,
+        platform: "instagram"
+      })));
+    } catch (e) {
+      console.error(`Error fetching comments for media ${media.id}`);
+    }
   }
 
   return allComments;
