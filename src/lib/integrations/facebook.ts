@@ -57,38 +57,28 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // Try /posts instead of /feed for better compatibility in dev mode
-  const postsRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/posts`, {
+  // Use expanded field fetching to get comments in the same call as posts
+  // This is much more permission-friendly
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/feed`, {
     params: {
       access_token: pageAccessToken,
-      fields: "id,message,created_time,permalink_url",
-      limit: 25 // Increased depth
+      fields: "id,message,created_time,permalink_url,comments{id,message,created_time}",
+      limit: 25
     }
   });
 
-  const posts = postsRes.data.data || [];
+  const posts = res.data.data || [];
   const allComments: any[] = [];
 
   for (const post of posts) {
-    try {
-      const commentsRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${post.id}/comments`, {
-        params: {
-          access_token: pageAccessToken,
-          fields: "id,message,created_time", // Extremely minimal fields
-          limit: 50
-        }
-      });
-
-      const comments = commentsRes.data.data || [];
-      allComments.push(...comments.map((c: any) => ({
+    if (post.comments && post.comments.data) {
+      allComments.push(...post.comments.data.map((c: any) => ({
         ...c,
         postId: post.id,
         postMessage: post.message,
         permalink: post.permalink_url,
         platform: "facebook"
       })));
-    } catch (e) {
-       console.error(`Error fetching comments for post ${post.id}`);
     }
   }
 
@@ -96,37 +86,27 @@ export const fetchFacebookComments = async (pageId: string, pageAccessToken: str
 };
 
 export const fetchInstagramComments = async (instagramId: string, pageAccessToken: string) => {
-  const mediaRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${instagramId}/media`, {
+  // Use expanded field fetching for Instagram too
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${instagramId}/media`, {
     params: {
       access_token: pageAccessToken,
-      fields: "id,caption,media_type,media_url,permalink,timestamp",
-      limit: 25 // Increased depth
+      fields: "id,caption,permalink,timestamp,comments{id,text,username,timestamp}",
+      limit: 25
     }
   });
 
-  const mediaList = mediaRes.data.data || [];
+  const mediaList = res.data.data || [];
   const allComments: any[] = [];
 
   for (const media of mediaList) {
-    try {
-      const commentsRes = await axios.get(`https://graph.facebook.com/${API_VERSION}/${media.id}/comments`, {
-        params: {
-          access_token: pageAccessToken,
-          fields: "id,text,username,timestamp",
-          limit: 50
-        }
-      });
-
-      const comments = commentsRes.data.data || [];
-      allComments.push(...comments.map((c: any) => ({
+    if (media.comments && media.comments.data) {
+      allComments.push(...media.comments.data.map((c: any) => ({
         ...c,
         mediaId: media.id,
         caption: media.caption,
         permalink: media.permalink,
         platform: "instagram"
       })));
-    } catch (e) {
-      console.error(`Error fetching comments for media ${media.id}`);
     }
   }
 
