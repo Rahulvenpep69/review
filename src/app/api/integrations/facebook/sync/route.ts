@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, count: allNormalizedInteractions.length });
 
   } catch (error: any) {
-    console.error("Meta Sync Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const metaError = error.response?.data?.error?.message || error.message;
+    console.error("Meta Sync Error:", metaError);
+    return NextResponse.json({ error: metaError }, { status: 500 });
   }
 }
