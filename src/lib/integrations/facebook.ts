@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_VERSION = "v12.0"; // Legacy version for maximum compatibility
+const API_VERSION = "v12.0";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
@@ -58,11 +58,11 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // Using /posts instead of /feed in v12.0
-  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/posts`, {
+  // Try /feed which is the most comprehensive for all types of posts
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/feed`, {
     params: {
       access_token: pageAccessToken,
-      fields: "id,message,created_time,permalink_url,comments{id,message,created_time,from}",
+      fields: "id,message,created_time,permalink_url,from,comments{id,message,created_time,from}",
       limit: 100
     }
   });
@@ -71,7 +71,13 @@ export const fetchFacebookComments = async (pageId: string, pageAccessToken: str
   const results: any[] = [];
 
   for (const post of posts) {
-    results.push(post);
+    // Save the post
+    results.push({
+      ...post,
+      isPost: true
+    });
+
+    // Save comments
     if (post.comments && post.comments.data) {
       results.push(...post.comments.data.map((c: any) => ({
         ...c,
@@ -97,7 +103,10 @@ export const fetchInstagramComments = async (instagramId: string, pageAccessToke
   const results: any[] = [];
 
   for (const media of mediaList) {
-    results.push(media);
+    results.push({
+      ...media,
+      isPost: true
+    });
     if (media.comments && media.comments.data) {
       results.push(...media.comments.data.map((c: any) => ({
         ...c,
