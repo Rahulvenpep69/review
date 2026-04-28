@@ -133,9 +133,35 @@ export default function SettingsPage() {
     } catch (e) { alert("Failed to link"); }
   };
 
+  const [showMetaModal, setShowMetaModal] = useState(false);
+  const [metaConfig, setMetaConfig] = useState({ appId: "", appSecret: "" });
+
+  const fetchConfig = async () => {
+    try {
+      const res = await axios.get("/api/config?tenantId=tenant_1");
+      setMetaConfig({ 
+        appId: res.data.metaAppId || "", 
+        appSecret: res.data.metaAppSecret || "" 
+      });
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSaveConfig = async () => {
+    try {
+      await axios.post("/api/config", {
+        tenantId: "tenant_1",
+        metaAppId: metaConfig.appId,
+        metaAppSecret: metaConfig.appSecret
+      });
+      alert("Platform credentials saved!");
+      setShowMetaModal(false);
+    } catch (e) { alert("Failed to save credentials"); }
+  };
+
   useEffect(() => {
     fetchLocations();
     fetchMetaPages();
+    fetchConfig();
   }, []);
 
   const toggleStatus = (id: string) => {
@@ -173,17 +199,23 @@ export default function SettingsPage() {
         alert("Check Google Auth settings");
       }
     } else if (id === "facebook" || id === "instagram") {
+      // Check if config exists first
+      if (!metaConfig.appId || !metaConfig.appSecret) {
+        setShowMetaModal(true);
+        return;
+      }
+
       try {
-        const res = await axios.get("/api/integrations/facebook/auth");
+        const res = await axios.get("/api/integrations/facebook/auth?tenantId=tenant_1");
         if (res.data.url) window.location.href = res.data.url;
-      } catch (error) {
-        alert("Check Meta Auth settings");
+      } catch (error: any) {
+        alert(error.response?.data?.error || "Check Meta Auth settings");
+        setShowMetaModal(true);
       }
     } else {
       toggleStatus(id);
     }
   };
-
 
   return (
     <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-700">
@@ -192,6 +224,52 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your brand integrations and connection status.</p>
       </div>
 
+      {showMetaModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <h3 className="text-2xl font-bold font-outfit mb-2">Meta Developer Setup</h3>
+            <p className="text-sm text-muted-foreground mb-6">Enter your Meta App credentials to enable Facebook/Instagram login.</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold uppercase text-primary mb-1.5 block">Meta App ID</label>
+                <input 
+                  type="text" 
+                  value={metaConfig.appId}
+                  onChange={(e) => setMetaConfig({...metaConfig, appId: e.target.value})}
+                  className="w-full bg-accent/50 border border-border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="Paste App ID here..."
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-primary mb-1.5 block">Meta App Secret</label>
+                <input 
+                  type="password" 
+                  value={metaConfig.appSecret}
+                  onChange={(e) => setMetaConfig({...metaConfig, appSecret: e.target.value})}
+                  className="w-full bg-accent/50 border border-border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="Paste App Secret here..."
+                />
+              </div>
+            </div>
+
+            <div className="mt-8 flex gap-3">
+              <button 
+                onClick={() => setShowMetaModal(false)}
+                className="flex-1 px-6 py-3 rounded-xl text-sm font-bold bg-accent hover:bg-accent/80 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveConfig}
+                className="flex-1 px-6 py-3 rounded-xl text-sm font-bold bg-primary text-primary-foreground premium-gradient hover:opacity-90 transition-all"
+              >
+                Save & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl shadow-black/20">
         <div className="p-8 border-b border-border bg-accent/10">
@@ -295,6 +373,14 @@ export default function SettingsPage() {
                     >
                       Sync Real Data
                     </button>
+                    {(item.id === "facebook" || item.id === "instagram") && (
+                      <button 
+                        onClick={() => setShowMetaModal(true)}
+                        className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hover:underline"
+                      >
+                        Edit API Keys
+                      </button>
+                    )}
                   </div>
                 )}
                 {item.status === "connected" ? (

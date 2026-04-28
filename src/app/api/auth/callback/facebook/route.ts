@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import MetaCredential from "@/lib/models/MetaCredential";
+import PlatformConfig from "@/lib/models/PlatformConfig";
 import { exchangeCodeForFacebookToken, fetchFacebookPages } from "@/lib/integrations/facebook";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-  const tenantId = "tenant_1"; // In production, this would come from session or state
+  const tenantId = "tenant_1"; 
 
   if (!code) {
     return NextResponse.redirect(new URL("/settings?error=no_code", req.url));
@@ -15,8 +16,15 @@ export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     
+    const config = await PlatformConfig.findOne({ tenantId });
+    if (!config?.metaAppId || !config?.metaAppSecret) {
+      throw new Error("Meta App ID/Secret missing during callback");
+    }
+
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/facebook`;
+
     // 1. Exchange code for long-lived access token
-    const longAccessToken = await exchangeCodeForFacebookToken(code);
+    const longAccessToken = await exchangeCodeForFacebookToken(code, config.metaAppId, config.metaAppSecret, redirectUri);
     
     // 2. Fetch available pages and their Instagram links
     const pages = await fetchFacebookPages(longAccessToken);

@@ -1,10 +1,6 @@
 import axios from "axios";
 
-const APP_ID = process.env.META_APP_ID;
-const APP_SECRET = process.env.META_APP_SECRET;
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/facebook`;
-
-export const getFacebookAuthUrl = () => {
+export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
     "pages_show_list",
     "pages_read_engagement",
@@ -17,16 +13,16 @@ export const getFacebookAuthUrl = () => {
     "business_management"
   ];
 
-  return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${REDIRECT_URI}&scope=${scopes.join(",")}&response_type=code`;
+  return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes.join(",")}&response_type=code`;
 };
 
-export const exchangeCodeForFacebookToken = async (code: string) => {
+export const exchangeCodeForFacebookToken = async (code: string, appId: string, appSecret: string, redirectUri: string) => {
   // 1. Exchange code for short-lived token
   const tokenRes = await axios.get(`https://graph.facebook.com/v19.0/oauth/access_token`, {
     params: {
-      client_id: APP_ID,
-      client_secret: APP_SECRET,
-      redirect_uri: REDIRECT_URI,
+      client_id: appId,
+      client_secret: appSecret,
+      redirect_uri: redirectUri,
       code
     }
   });
@@ -37,8 +33,8 @@ export const exchangeCodeForFacebookToken = async (code: string) => {
   const longTokenRes = await axios.get(`https://graph.facebook.com/v19.0/oauth/access_token`, {
     params: {
       grant_type: "fb_exchange_token",
-      client_id: APP_ID,
-      client_secret: APP_SECRET,
+      client_id: appId,
+      client_secret: appSecret,
       fb_exchange_token: shortToken
     }
   });
