@@ -2,14 +2,12 @@ import axios from "axios";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
+    "public_profile",
     "pages_show_list",
     "pages_read_engagement",
     "pages_manage_metadata",
-    "pages_read_user_content",
-    "pages_manage_engagement",
     "instagram_basic",
     "instagram_manage_comments",
-    "instagram_manage_insights",
     "business_management"
   ];
 
