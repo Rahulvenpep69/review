@@ -362,8 +362,9 @@ export default function SettingsPage() {
                           await axios.post(route, { tenantId: "tenant_1" });
                           alert("Sync Complete!");
                           window.location.reload();
-                        } catch (e) {
-                          alert("Sync Failed. Check credentials.");
+                        } catch (e: any) {
+                          const msg = e.response?.data?.error || e.message;
+                          alert(`Sync Failed: ${msg}`);
                         } finally {
                           btn.innerText = originalText;
                           btn.disabled = false;
