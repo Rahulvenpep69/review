@@ -19,37 +19,53 @@ export async function POST(req: NextRequest) {
     if (!selectedPage) return NextResponse.json({ error: "Selected page not found" }, { status: 404 });
 
     const allNormalizedInteractions: any[] = [];
+    let fbError = null;
+    let igError = null;
 
     // 1. Fetch Facebook Comments
-    const fbComments = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
-    allNormalizedInteractions.push(...fbComments.map((c: any) => ({
-      platform: "facebook",
-      externalId: c.id,
-      customer: { name: c.from?.name || "FB User" },
-      content: { text: c.message, mediaType: "text" as const },
-      createdAt: c.created_time
-    })));
+    try {
+      const fbComments = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
+      allNormalizedInteractions.push(...fbComments.map((c: any) => ({
+        platform: "facebook",
+        externalId: c.id,
+        customer: { name: "FB User" },
+        content: { text: c.message, mediaType: "text" as const },
+        createdAt: c.created_time
+      })));
+    } catch (e: any) {
+      fbError = e.response?.data?.error?.message || e.message;
+      console.error("FB Sync Partial Failure:", fbError);
+    }
 
     // 2. Fetch Instagram Comments (if linked)
     if (credential.selectedInstagramId) {
-      const igComments = await fetchInstagramComments(credential.selectedInstagramId, selectedPage.accessToken);
-      allNormalizedInteractions.push(...igComments.map((c: any) => ({
-        platform: "instagram",
-        externalId: c.id,
-        customer: { name: c.username || "IG User" },
-        content: { text: c.text, mediaType: "text" as const },
-        createdAt: c.timestamp
-      })));
+      try {
+        const igComments = await fetchInstagramComments(credential.selectedInstagramId, selectedPage.accessToken);
+        allNormalizedInteractions.push(...igComments.map((c: any) => ({
+          platform: "instagram",
+          externalId: c.id,
+          customer: { name: c.username || "IG User" },
+          content: { text: c.text, mediaType: "text" as const },
+          createdAt: c.timestamp
+        })));
+      } catch (e: any) {
+        igError = e.response?.data?.error?.message || e.message;
+        console.error("IG Sync Partial Failure:", igError);
+      }
     }
 
-    const savedCount = 0;
+    // If both failed and we found nothing, then it's a real failure
+    if (allNormalizedInteractions.length === 0 && (fbError || igError)) {
+      return NextResponse.json({ 
+        error: `Sync failed. FB: ${fbError || "none"}, IG: ${igError || "none"}` 
+      }, { status: 400 });
+    }
+
     // 3. Process and Save
     for (const item of allNormalizedInteractions) {
       const existing = await Interaction.findOne({ externalId: item.externalId });
       if (!existing) {
-        // Run AI Analysis
         const aiResult = await analyzeInteraction(item.content.text, item.platform as any, "Friendly");
-        
         const newInteraction = new Interaction({
           ...item,
           tenantId,
@@ -73,11 +89,16 @@ export async function POST(req: NextRequest) {
     credential.lastSyncAt = new Date();
     await credential.save();
 
-    return NextResponse.json({ success: true, count: allNormalizedInteractions.length });
+    return NextResponse.json({ 
+      success: true, 
+      count: allNormalizedInteractions.length,
+      fbStatus: fbError ? "failed" : "success",
+      igStatus: igError ? "failed" : "success"
+    });
 
   } catch (error: any) {
     const metaError = error.response?.data?.error?.message || error.message;
-    console.error("Meta Sync Error:", metaError);
+    console.error("Meta Sync Critical Error:", metaError);
     return NextResponse.json({ error: metaError }, { status: 500 });
   }
 }
