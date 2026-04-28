@@ -17,13 +17,6 @@ import axios from "axios";
 export default function SettingsPage() {
   const [integrations, setIntegrations] = useState([
     {
-      id: "google",
-      name: "Google Business Profile",
-      description: "Sync reviews and ratings from all your locations.",
-      icon: <Globe className="w-6 h-6 text-blue-400" />,
-      status: "disconnected",
-    },
-    {
       id: "facebook",
       name: "Facebook Pages",
       description: "Monitor comments and reviews on your FB posts.",
@@ -116,9 +109,9 @@ export default function SettingsPage() {
       const payload: any = { tenantId: "tenant_1" };
       if (type === "facebook") {
         payload.pageId = value;
-        payload.instagramId = selectedInstagram; // keep existing
+        payload.instagramId = selectedInstagram;
       } else {
-        payload.pageId = selectedMetaPage; // keep existing
+        payload.pageId = selectedMetaPage;
         payload.instagramId = value;
       }
 
@@ -178,14 +171,7 @@ export default function SettingsPage() {
       return;
     }
 
-    if (id === "google") {
-      try {
-        const res = await axios.get("/api/integrations/google/auth");
-        if (res.data.url) window.location.href = res.data.url;
-      } catch (error) {
-        alert("Check Google Auth settings");
-      }
-    } else if (id === "facebook" || id === "instagram") {
+    if (id === "facebook" || id === "instagram") {
       if (!metaConfig.appId || !metaConfig.appSecret) {
         setShowMetaModal(true);
         return;
@@ -266,33 +252,6 @@ export default function SettingsPage() {
                   <h3 className="text-xl font-bold font-outfit mb-1">{item.name}</h3>
                   <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
                   
-                  {item.id === "google" && item.status === "connected" && (
-                    <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
-                      <p className="text-[10px] font-black uppercase text-primary mb-1.5 tracking-wider">Select Active Location</p>
-                      <select 
-                        value={selectedLoc}
-                        onChange={handleLocationChange}
-                        disabled={isLoadingLocs}
-                        className="bg-accent/50 border border-border rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none w-full min-w-[240px] appearance-none cursor-pointer"
-                      >
-                        {isLoadingLocs ? (
-                          <option>Loading locations...</option>
-                        ) : googleLocations.length > 0 ? (
-                          <>
-                            <option value="">-- Choose a location --</option>
-                            {googleLocations.map((loc: any) => (
-                              <option key={loc.locationId} value={loc.locationId}>
-                                {loc.locationName}
-                              </option>
-                            ))}
-                          </>
-                        ) : (
-                          <option>No locations found</option>
-                        )}
-                      </select>
-                    </div>
-                  )}
-
                   {item.id === "facebook" && item.status === "connected" && (
                     <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
                       <p className="text-[10px] font-black uppercase text-primary mb-1.5 tracking-wider">Select Facebook Page</p>
@@ -331,9 +290,8 @@ export default function SettingsPage() {
                   <div className="flex flex-col gap-2">
                     <button 
                       onClick={async () => {
-                        const originalText = "Sync Real Data";
                         try {
-                          const route = item.id === "google" ? "/api/integrations/google/sync" : "/api/integrations/facebook/sync";
+                          const route = "/api/integrations/facebook/sync";
                           const res = await axios.post(route, { tenantId: "tenant_1" });
                           alert(`Sync Complete! Found ${res.data.count} items.`);
                           window.location.reload();
