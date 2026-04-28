@@ -16,22 +16,26 @@ export async function POST(req: NextRequest) {
     }
 
     const selectedPage = credential.pages.find((p: any) => p.id === credential.selectedPageId);
-    if (!selectedPage) return NextResponse.json({ error: "Selected page not found" }, { status: 404 });
+    if (!selectedPage) {
+      return NextResponse.json({ 
+        error: `Page ${credential.selectedPageId} not found in your connected pages list. Please try Re-connecting.`,
+        debug: { availablePages: credential.pages.map((p: any) => p.name) }
+      }, { status: 404 });
+    }
 
     const allNormalizedInteractions: any[] = [];
     let fbError = null;
     let igError = null;
 
-    // 1. Fetch Facebook Posts and Comments
+    // 1. Fetch Facebook (Posts + Comments + Feed)
     try {
-      // fetchFacebookComments now returns an expanded list including the posts themselves
       const fbData = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
       allNormalizedInteractions.push(...fbData.map((item: any) => ({
         platform: "facebook",
         externalId: item.id,
-        customer: { name: item.from?.name || "FB User" },
+        customer: { name: item.from?.name || item.username || "FB User" },
         content: { 
-          text: item.message || "[Media Post]", 
+          text: item.message || item.text || (item.isComment ? "[Comment]" : "[Post]"), 
           mediaType: "text" as const,
           permalink: item.permalink_url 
         },
@@ -39,10 +43,9 @@ export async function POST(req: NextRequest) {
       })));
     } catch (e: any) {
       fbError = e.response?.data?.error?.message || e.message;
-      console.error("FB Sync Partial Failure:", fbError);
     }
 
-    // 2. Fetch Instagram Media and Comments
+    // 2. Fetch Instagram (Media + Comments)
     if (credential.selectedInstagramId) {
       try {
         const igData = await fetchInstagramComments(credential.selectedInstagramId, selectedPage.accessToken);
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
           externalId: item.id,
           customer: { name: item.username || "IG User" },
           content: { 
-            text: item.text || item.caption || "[Instagram Post]", 
+            text: item.text || item.caption || (item.isComment ? "[Comment]" : "[Post]"), 
             mediaType: "text" as const,
             permalink: item.permalink 
           },
@@ -59,7 +62,6 @@ export async function POST(req: NextRequest) {
         })));
       } catch (e: any) {
         igError = e.response?.data?.error?.message || e.message;
-        console.error("IG Sync Partial Failure:", igError);
       }
     }
 
@@ -98,12 +100,16 @@ export async function POST(req: NextRequest) {
       count: allNormalizedInteractions.length,
       saved: savedCount,
       fbStatus: fbError ? `Error: ${fbError}` : "Success",
-      igStatus: igError ? `Error: ${igError}` : "Success"
+      igStatus: igError ? `Error: ${igError}` : "Success",
+      debug: {
+        fbFound: allNormalizedInteractions.filter(i => i.platform === "facebook").length,
+        igFound: allNormalizedInteractions.filter(i => i.platform === "instagram").length,
+        pageIdUsed: selectedPage.id
+      }
     });
 
   } catch (error: any) {
     const metaError = error.response?.data?.error?.message || error.message;
-    console.error("Meta Sync Critical Error:", metaError);
     return NextResponse.json({ error: metaError }, { status: 500 });
   }
 }
