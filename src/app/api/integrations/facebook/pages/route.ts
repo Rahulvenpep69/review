@@ -30,13 +30,17 @@ export async function POST(req: NextRequest) {
     await dbConnect();
     const { tenantId, pageId, instagramId } = await req.json();
 
-    if (!tenantId || !pageId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!tenantId || (!pageId && !instagramId)) {
+      return NextResponse.json({ error: "Please select at least one Page or Account" }, { status: 400 });
     }
+
+    const update: any = {};
+    if (pageId) update.selectedPageId = pageId;
+    if (instagramId) update.selectedInstagramId = instagramId;
 
     await MetaCredential.findOneAndUpdate(
       { tenantId },
-      { selectedPageId: pageId, selectedInstagramId: instagramId },
+      update,
       { new: true }
     );
 
