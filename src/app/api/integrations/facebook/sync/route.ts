@@ -11,16 +11,14 @@ export async function POST(req: NextRequest) {
     const { tenantId, platform } = await req.json();
 
     const credential = await MetaCredential.findOne({ tenantId });
-    if (!credential || !credential.selectedPageId) {
-      return NextResponse.json({ error: "Meta not fully configured" }, { status: 400 });
+    if (!credential || (!credential.selectedPageId && !credential.selectedInstagramId)) {
+      return NextResponse.json({ error: "Please select a Page or Instagram account in Settings first." }, { status: 400 });
     }
 
-    const selectedPage = credential.pages.find((p: any) => p.id === credential.selectedPageId);
+    // Determine which page token to use (prefer the one with the selected page, or the first one)
+    const selectedPage = credential.pages.find((p: any) => p.id === credential.selectedPageId) || credential.pages[0];
     if (!selectedPage) {
-      return NextResponse.json({ 
-        error: `Page ${credential.selectedPageId} not found in your connected pages list. Please try Re-connecting.`,
-        debug: { availablePages: credential.pages.map((p: any) => p.name) }
-      }, { status: 404 });
+      return NextResponse.json({ error: "No connected pages found. Please connect your Facebook account." }, { status: 404 });
     }
 
     const allNormalizedInteractions: any[] = [];
