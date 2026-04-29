@@ -92,6 +92,8 @@ export default function SettingsPage() {
     setIsLoadingMeta(true);
     try {
       const res = await axios.get("/api/integrations/facebook/pages?tenantId=tenant_1");
+      
+      // Load saved list of pages and currently selected page
       setMetaPages(res.data.pages || []);
       setSelectedMetaPage(res.data.selectedPageId || "");
       setSelectedInstagram(res.data.selectedInstagramId || "");
@@ -106,21 +108,26 @@ export default function SettingsPage() {
   };
 
   const handleMetaSelect = async (type: "facebook" | "instagram", value: string) => {
+    if (!value) return;
     try {
-      const payload: any = { tenantId: "tenant_1" };
       if (type === "facebook") {
-        payload.pageId = value;
-        payload.instagramId = selectedInstagram;
+        // Persist the selection to the database immediately
+        await axios.post("/api/social/facebook/select-page", { 
+          tenantId: "tenant_1", 
+          pageId: value 
+        });
+        setSelectedMetaPage(value);
       } else {
-        payload.pageId = selectedMetaPage;
-        payload.instagramId = value;
+        // Handle Instagram selection
+        await axios.post("/api/integrations/facebook/pages", {
+          tenantId: "tenant_1",
+          pageId: selectedMetaPage,
+          instagramId: value
+        });
+        setSelectedInstagram(value);
       }
-
-      await axios.post("/api/integrations/facebook/pages", payload);
-      if (type === "facebook") setSelectedMetaPage(value);
-      else setSelectedInstagram(value);
       
-      alert(`${type === "facebook" ? "Facebook Page" : "Instagram Account"} updated!`);
+      alert(`${type === "facebook" ? "Facebook Page" : "Instagram Account"} selection saved permanently!`);
     } catch (e: any) { 
       const msg = e.response?.data?.error || e.message || "Failed to link";
       alert("Error: " + msg); 

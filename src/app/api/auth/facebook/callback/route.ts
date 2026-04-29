@@ -7,9 +7,10 @@ import { exchangeCodeForFacebookToken, fetchFacebookPages } from "@/lib/integrat
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
+  const manualToken = searchParams.get("manual_token");
   const tenantId = "tenant_1"; 
 
-  if (!code) {
+  if (!code && !manualToken) {
     return NextResponse.redirect(new URL("/settings?error=no_code", req.url));
   }
 
@@ -23,53 +24,35 @@ export async function GET(req: NextRequest) {
 
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/facebook/callback`;
 
-    let userAccessToken = searchParams.get("manual_token");
+    let userAccessToken = manualToken;
 
-    if (!userAccessToken) {
+    if (!userAccessToken && code) {
       // 1. Exchange code for USER_ACCESS_TOKEN
-      console.log("Exchanging code for user token...");
       userAccessToken = await exchangeCodeForFacebookToken(code, config.metaAppId, config.metaAppSecret, redirectUri);
     }
     
     if (!userAccessToken) {
       throw new Error("Failed to obtain Facebook Access Token");
     }
-    
-    console.log("USER_TOKEN:", userAccessToken.substring(0, 10) + "...");
 
-    // 2. Fetch /me/accounts to get Page Tokens
-    console.log("Fetching pages and page tokens...");
+    // 2. Fetch all Facebook Pages
     const pages = await fetchFacebookPages(userAccessToken);
-    console.log("PAGES RESPONSE:", JSON.stringify(pages.map((p: any) => ({ name: p.name, id: p.id }))));
+    console.log("Saved Pages List:", pages.length);
 
-    if (pages.length === 0) {
-       return NextResponse.redirect(new URL("/settings?error=no_pages", req.url));
-    }
-
-    // 3. Save to MongoDB
-    const firstPage = pages[0];
-    console.log("PAGE TOKEN:", firstPage.accessToken.substring(0, 10) + "...");
-    console.log("PAGE ID:", firstPage.id);
-
+    // 3. Save User Token and Pages List (Do NOT assume page selected yet)
     await MetaCredential.findOneAndUpdate(
       { tenantId },
       { 
         accessToken: userAccessToken,
         facebookUserToken: userAccessToken,
-        facebookPageId: firstPage.id,
-        facebookPageName: firstPage.name,
-        facebookPageToken: firstPage.accessToken,
-        facebookConnected: true,
-        pages: pages,
-        selectedPageId: firstPage.id,
+        facebookPages: pages,
         brandId: "brand_1",
-        connectedAt: new Date(),
-        lastSyncAt: new Date()
+        facebookConnected: false // Not fully connected until a page is selected
       },
       { upsert: true, new: true }
     );
 
-    return NextResponse.redirect(new URL("/settings?connected=true", req.url));
+    return NextResponse.redirect(new URL("/settings?connected=facebook_oauth_success", req.url));
 
   } catch (error: any) {
     console.error("Facebook Callback Error:", error);

@@ -5,6 +5,12 @@ export interface IMetaCredential extends Document {
   brandId: string;
   accessToken: string; // User Access Token
   facebookUserToken?: string;
+  facebookPages?: Array<{
+    id: string;
+    name: string;
+    accessToken: string;
+    instagramId?: string;
+  }>;
   facebookPageId?: string;
   facebookPageName?: string;
   facebookPageToken?: string;
@@ -27,6 +33,12 @@ const MetaCredentialSchema: Schema = new Schema({
   brandId: { type: String, required: true },
   accessToken: { type: String, required: true }, // Long-lived User Access Token
   facebookUserToken: { type: String },
+  facebookPages: [{
+    id: { type: String },
+    name: { type: String },
+    accessToken: { type: String },
+    instagramId: { type: String }
+  }],
   facebookPageId: { type: String },
   facebookPageName: { type: String },
   facebookPageToken: { type: String },
