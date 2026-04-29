@@ -121,7 +121,10 @@ export default function SettingsPage() {
       else setSelectedInstagram(value);
       
       alert(`${type === "facebook" ? "Facebook Page" : "Instagram Account"} updated!`);
-    } catch (e) { alert("Failed to link"); }
+    } catch (e: any) { 
+      const msg = e.response?.data?.error || e.message || "Failed to link";
+      alert("Error: " + msg); 
+    }
   };
 
   const [showMetaModal, setShowMetaModal] = useState(false);
