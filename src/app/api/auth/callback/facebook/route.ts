@@ -29,13 +29,24 @@ export async function GET(req: NextRequest) {
     // 2. Fetch available pages and their Instagram links
     const pages = await fetchFacebookPages(longAccessToken);
     
-    // 3. Save or Update Credential
+    // 3. Save or Update Credential (Merge Pages)
+    const existing = await MetaCredential.findOne({ tenantId });
+    
+    let updatedPages = pages;
+    if (existing) {
+      // Create a map of existing pages by ID
+      const pageMap = new Map(existing.pages.map((p: any) => [p.id, p]));
+      // Add or Update with new pages
+      pages.forEach((p: any) => pageMap.set(p.id, p));
+      updatedPages = Array.from(pageMap.values());
+    }
+
     await MetaCredential.findOneAndUpdate(
       { tenantId },
       { 
-        accessToken: longAccessToken,
+        accessToken: longAccessToken, // Keep the latest user token as primary
         brandId: "brand_1",
-        pages,
+        pages: updatedPages,
         lastSyncAt: new Date()
       },
       { upsert: true, new: true }
