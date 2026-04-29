@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
     console.log("WEBHOOK_VERIFIED");
-    return new NextResponse(challenge, { status: 200 });
+    // Use plain Response for the challenge to avoid any Next.js JSON wrapping
+    return new Response(challenge, { status: 200 });
   } else {
     return new NextResponse("Forbidden", { status: 403 });
   }
