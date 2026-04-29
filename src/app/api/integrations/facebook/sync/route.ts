@@ -30,7 +30,14 @@ export async function POST(req: NextRequest) {
     // 1. Fetch Facebook (Posts + Comments + Feed)
     if (!platform || platform === "facebook") {
       try {
-        const fbData = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
+        // Try with Page Token first, fall back to User Token if it fails
+        let fbData;
+        try {
+          fbData = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
+        } catch (e) {
+          console.log("Page Token failed, trying User Token...");
+          fbData = await fetchFacebookComments(selectedPage.id, credential.accessToken);
+        }
       allNormalizedInteractions.push(...fbData.map((item: any) => ({
         platform: "facebook",
         externalId: item.id,
