@@ -62,7 +62,7 @@ export const fetchFacebookComments = async (pageId: string, pageAccessToken: str
   const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/published_posts`, {
     params: {
       access_token: pageAccessToken,
-      fields: "id,message,created_time,permalink_url,from,comments{id,message,created_time,from}",
+      fields: "id,message,created_time,permalink_url,comments{id,message,created_time}",
       limit: 100
     }
   });
