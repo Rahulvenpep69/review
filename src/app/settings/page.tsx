@@ -289,6 +289,12 @@ export default function SettingsPage() {
                 {item.status === "connected" && (
                   <div className="flex flex-col gap-2">
                     <button 
+                      onClick={() => handleConnect(item.id)}
+                      className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/20"
+                    >
+                      Link Another {item.id === "facebook" ? "FB profile" : "IG account"}
+                    </button>
+                    <button 
                       onClick={async () => {
                         try {
                           const route = "/api/integrations/facebook/sync";
