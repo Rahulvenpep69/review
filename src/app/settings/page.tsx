@@ -316,9 +316,14 @@ export default function SettingsPage() {
                     <button 
                       onClick={async () => {
                         try {
-                          const route = "/api/social/facebook/sync";
+                          const route = item.id === "facebook" ? "/api/social/facebook/sync" : "/api/social/instagram/sync";
                           const res = await axios.post(route, { tenantId: "tenant_1" });
-                          alert(`Sync Complete! Found ${res.data.fbFound} items on ${res.data.pageName}.\nStatus: ${res.data.status}`);
+                          
+                          if (item.id === "facebook") {
+                            alert(`Facebook Sync Complete! Found ${res.data.fbFound} items on ${res.data.pageName}.`);
+                          } else {
+                            alert(`Instagram Sync Complete! Found ${res.data.igFound} items.`);
+                          }
                           window.location.reload();
                         } catch (e: any) {
                           alert(`Sync Failed: ${e.response?.data?.error || e.message}`);
