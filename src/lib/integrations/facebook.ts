@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_VERSION = "v23.0";
+const API_VERSION = "v20.0";
 const CONFIG_ID = "1920585538603976";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {

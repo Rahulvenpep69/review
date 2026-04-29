@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     
     try {
       // Fetch Feed/Posts
-      const feedRes = await axios.get(`https://graph.facebook.com/v23.0/${pageId}/feed`, {
+      const feedRes = await axios.get(`https://graph.facebook.com/v20.0/${pageId}/feed`, {
         params: {
           access_token: pageToken,
           fields: "id,message,created_time,permalink_url,from,comments{id,message,created_time,from}"
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       allInteractions.push(...(feedRes.data.data || []));
 
       // Fetch Ratings/Reviews
-      const ratingsRes = await axios.get(`https://graph.facebook.com/v23.0/${pageId}/ratings`, {
+      const ratingsRes = await axios.get(`https://graph.facebook.com/v20.0/${pageId}/ratings`, {
         params: {
           access_token: pageToken,
           fields: "open_graph_story,rating,review_text,created_time,reviewer"
@@ -71,9 +71,10 @@ export async function POST(req: NextRequest) {
       })));
 
     } catch (error: any) {
-      console.error("Meta API Error:", error.response?.data || error.message);
+      const metaError = error.response?.data?.error?.message || error.message;
+      console.error("Meta API Error:", metaError);
       return NextResponse.json({ 
-        error: "Saved Facebook Page token expired. Please reconnect.",
+        error: `Facebook Error: ${metaError}. Please try reconnecting.`,
         status: "Error"
       }, { status: 401 });
     }
