@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Interaction from "@/lib/models/Interaction";
+import MetaCredential from "@/lib/models/MetaCredential";
+import GoogleCredential from "@/lib/models/GoogleCredential";
 import { analyzeInteraction } from "@/lib/ai-engine";
 
 export async function POST(req: NextRequest) {
@@ -68,7 +70,39 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
     }
 
-    const interactions = await Interaction.find({ tenantId }).sort({ createdAt: -1 });
+    const activeLocationIds: string[] = [];
+
+    // Get Meta active accounts
+    const metaCred = await MetaCredential.findOne({ tenantId });
+    if (metaCred) {
+      if (metaCred.selectedPageId) activeLocationIds.push(metaCred.selectedPageId);
+      if (metaCred.selectedInstagramId) activeLocationIds.push(metaCred.selectedInstagramId);
+    }
+
+    // Get Google active locations
+    const googleCred = await GoogleCredential.findOne({ tenantId });
+    if (googleCred && googleCred.locationId) {
+      activeLocationIds.push(googleCred.locationId);
+    }
+
+    // Include interactions that either match an active locationId, or are legacy 'meta_default'
+    // To ensure we don't accidentally hide old interactions that haven't been re-synced yet,
+    // we could also include "meta_default" if we want, but the user EXPLICITLY requested:
+    // "don't show the previous account comments". This strict filter accomplishes exactly that.
+    
+    let query: any = { tenantId };
+    
+    // If we found any configured credentials, restrict the query.
+    // If they have no credentials configured at all, maybe return nothing or everything?
+    // Let's restrict it to active locations if any exist, otherwise return nothing.
+    if (activeLocationIds.length > 0) {
+      query.locationId = { $in: activeLocationIds };
+    } else {
+      // If no credentials have selected accounts, we shouldn't show old phantom data
+      query.locationId = { $in: [] }; 
+    }
+
+    const interactions = await Interaction.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: interactions });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

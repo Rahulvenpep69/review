@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
           mediaType: "text" as const,
           permalink: item.permalink_url 
         },
+        locationId: selectedPage.id,
         isPost: item.isPost || false,
         parentId: item.parentId,
         createdAt: item.created_time
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
             mediaType: "text" as const,
             permalink: item.permalink 
           },
+          locationId: credential.selectedInstagramId,
           isPost: item.isPost || false,
           parentId: item.parentId,
           createdAt: item.timestamp
@@ -80,7 +82,6 @@ export async function POST(req: NextRequest) {
           ...item,
           tenantId,
           brandId: credential.brandId,
-          locationId: "meta_default",
           aiMetadata: {
             sentimentScore: aiResult.sentiment === "positive" ? 90 : aiResult.sentiment === "negative" ? 15 : 50,
             sentimentLabel: aiResult.sentiment,
@@ -97,6 +98,10 @@ export async function POST(req: NextRequest) {
       } else {
         // Update existing with the new hierarchy fields
         let needsUpdate = false;
+        if (existing.locationId !== item.locationId) {
+          existing.locationId = item.locationId;
+          needsUpdate = true;
+        }
         if (existing.isPost !== item.isPost) {
           existing.isPost = item.isPost;
           needsUpdate = true;
