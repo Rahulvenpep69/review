@@ -19,24 +19,15 @@ export async function POST(req: NextRequest) {
       const cred = await MetaCredential.findOne({ tenantId });
       if (!cred) throw new Error("Meta credentials not found");
 
-      // Find the page that this interaction belongs to (use locationId)
-      const page = cred.pages.find((p: any) => p.id === interaction.locationId);
-      
-      // Fallback: If it's Instagram, the locationId is the Instagram account ID, 
-      // but we need the Page Token of the linked Facebook Page to post.
-      let accessToken = page?.accessToken;
-      
-      if (interaction.platform === "instagram") {
-         const linkedPage = cred.pages.find((p: any) => p.id === cred.selectedPageId);
-         accessToken = linkedPage?.accessToken;
-      }
-
-      if (!accessToken) throw new Error("Page access token missing for this platform");
+      // Find the page that this interaction belongs to
+      const page = cred.pages.find((p: any) => p.id === interaction.pageId);
+      if (!page?.accessToken) throw new Error("Page access token missing");
 
       // Post comment reply
+      // For Facebook/Instagram, we POST to /{object-id}/comments
       await axios.post(`https://graph.facebook.com/v16.0/${interaction.externalId}/comments`, {
         message: text,
-        access_token: accessToken
+        access_token: page.accessToken
       });
     } else if (interaction.platform === "google") {
       // TODO: Google Business Profile reply logic
