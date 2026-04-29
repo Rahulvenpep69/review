@@ -58,8 +58,8 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // Try /feed which is the most comprehensive for all types of posts
-  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/feed`, {
+  // Use /published_posts instead of /feed to only get posts by the page, which avoids needing pages_read_user_content
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/published_posts`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,message,created_time,permalink_url,from,comments{id,message,created_time,from}",
