@@ -15,7 +15,10 @@ import {
   Star,
   Sparkles,
   RefreshCw,
-  MoreVertical
+  MoreVertical,
+  ChevronDown,
+  ChevronRight,
+  CornerDownRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -27,6 +30,7 @@ export default function InboxPage() {
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [expandedPosts, setExpandedPosts] = useState<string[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -69,6 +73,19 @@ export default function InboxPage() {
     );
   }
 
+  const topLevelItems = reviews.filter(r => r.isPost || !r.parentId);
+
+  const getCommentsForPost = (postId: string) => {
+    return reviews.filter(r => r.parentId === postId);
+  };
+
+  const togglePost = (postId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedPosts(prev => 
+      prev.includes(postId) ? prev.filter(id => id !== postId) : [...prev, postId]
+    );
+  };
+
   return (
     <div className="h-[calc(100vh-120px)] flex gap-6 animate-in slide-in-from-bottom-4 duration-700">
       {/* Sidebar - Review List */}
@@ -99,50 +116,115 @@ export default function InboxPage() {
           {reviews.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm">No interactions found.</div>
           ) : (
-            reviews.map((review) => (
-              <div 
-                key={review._id}
-                onClick={() => handleSelect(review)}
-                className={cn(
-                  "p-4 border-b border-border cursor-pointer transition-all hover:bg-accent/30",
-                  selectedReview?._id === review._id ? "bg-primary/5 border-l-4 border-l-primary" : ""
-                )}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-xs uppercase">
-                      {review.customer.name[0]}
+            topLevelItems.map((post) => {
+              const postComments = getCommentsForPost(post.externalId);
+              const isExpanded = expandedPosts.includes(post.externalId);
+              const isSelected = selectedReview?._id === post._id;
+
+              return (
+                <div key={post._id} className="border-b border-border">
+                  {/* Parent Post */}
+                  <div 
+                    onClick={() => handleSelect(post)}
+                    className={cn(
+                      "p-4 cursor-pointer transition-all hover:bg-accent/30",
+                      isSelected ? "bg-primary/5 border-l-4 border-l-primary" : "border-l-4 border-l-transparent"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        {postComments.length > 0 && (
+                          <button onClick={(e) => togglePost(post.externalId, e)} className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground">
+                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </button>
+                        )}
+                        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-xs uppercase">
+                          {post.customer.name[0]}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold truncate w-32 flex items-center gap-2">
+                            {post.customer.name}
+                            {postComments.length > 0 && (
+                              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">
+                                {postComments.length}
+                              </span>
+                            )}
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground">
+                            {formatDistanceToNow(new Date(post.createdAt))} ago
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {post.platform === "google" && <Globe className="w-3.5 h-3.5 text-blue-400" />}
+                        {post.platform === "instagram" && <Camera className="w-3.5 h-3.5 text-pink-500" />}
+                        {post.platform === "facebook" && <Globe className="w-3.5 h-3.5 text-blue-600" />}
+                        {post.platform === "tiktok" && <MessageSquare className="w-3.5 h-3.5 text-rose-500" />}
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold truncate w-32">{review.customer.name}</h4>
-                      <p className="text-[10px] text-muted-foreground">
-                        {formatDistanceToNow(new Date(review.createdAt))} ago
-                      </p>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{post.content.text}</p>
+                    <div className="flex gap-2">
+                      <span className={cn(
+                        "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full border",
+                        post.aiMetadata.sentimentLabel === "negative" ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : 
+                        post.aiMetadata.sentimentLabel === "positive" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
+                        "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                      )}>
+                        {post.aiMetadata.sentimentLabel}
+                      </span>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground border border-border">
+                        {post.aiMetadata.issueCategory || "Post"}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {review.platform === "google" && <Globe className="w-3.5 h-3.5 text-blue-400" />}
-                    {review.platform === "instagram" && <Camera className="w-3.5 h-3.5 text-pink-500" />}
-                    {review.platform === "facebook" && <Globe className="w-3.5 h-3.5 text-blue-600" />}
-                    {review.platform === "tiktok" && <MessageSquare className="w-3.5 h-3.5 text-rose-500" />}
-                  </div>
+
+                  {/* Nested Comments */}
+                  {isExpanded && postComments.length > 0 && (
+                    <div className="bg-accent/5">
+                      {postComments.map((comment) => {
+                        const isCommentSelected = selectedReview?._id === comment._id;
+                        return (
+                          <div 
+                            key={comment._id}
+                            onClick={() => handleSelect(comment)}
+                            className={cn(
+                              "pl-12 pr-4 py-3 border-t border-border/50 cursor-pointer transition-all hover:bg-accent/20 flex gap-3",
+                              isCommentSelected ? "bg-primary/5" : ""
+                            )}
+                          >
+                            <CornerDownRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start mb-1">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className="w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center font-bold text-[9px] uppercase shrink-0">
+                                    {comment.customer.name[0]}
+                                  </div>
+                                  <h4 className="text-xs font-bold truncate">{comment.customer.name}</h4>
+                                </div>
+                                <span className="text-[9px] text-muted-foreground shrink-0 whitespace-nowrap ml-2">
+                                  {formatDistanceToNow(new Date(comment.createdAt))}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground line-clamp-1 mb-1.5">{comment.content.text}</p>
+                              <div className="flex gap-1.5">
+                                <span className={cn(
+                                  "text-[8px] font-bold uppercase px-1 py-0.5 rounded-full",
+                                  comment.aiMetadata.sentimentLabel === "negative" ? "bg-rose-500/10 text-rose-500" : 
+                                  comment.aiMetadata.sentimentLabel === "positive" ? "bg-emerald-500/10 text-emerald-500" : 
+                                  "bg-amber-500/10 text-amber-500"
+                                )}>
+                                  {comment.aiMetadata.sentimentLabel}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{review.content.text}</p>
-                <div className="flex gap-2">
-                  <span className={cn(
-                    "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full border",
-                    review.aiMetadata.sentimentLabel === "negative" ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : 
-                    review.aiMetadata.sentimentLabel === "positive" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
-                    "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                  )}>
-                    {review.aiMetadata.sentimentLabel}
-                  </span>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground border border-border">
-                    {review.aiMetadata.issueCategory}
-                  </span>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

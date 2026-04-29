@@ -82,7 +82,8 @@ export const fetchFacebookComments = async (pageId: string, pageAccessToken: str
       results.push(...post.comments.data.map((c: any) => ({
         ...c,
         permalink_url: post.permalink_url,
-        isComment: true
+        isComment: true,
+        parentId: post.id
       })));
     }
   }
@@ -111,7 +112,8 @@ export const fetchInstagramComments = async (instagramId: string, pageAccessToke
       results.push(...media.comments.data.map((c: any) => ({
         ...c,
         permalink: media.permalink,
-        isComment: true
+        isComment: true,
+        parentId: media.id
       })));
     }
   }

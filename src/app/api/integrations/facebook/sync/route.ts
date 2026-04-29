@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
           mediaType: "text" as const,
           permalink: item.permalink_url 
         },
+        isPost: item.isPost || false,
+        parentId: item.parentId,
         createdAt: item.created_time
       })));
     } catch (e: any) {
@@ -58,6 +60,8 @@ export async function POST(req: NextRequest) {
             mediaType: "text" as const,
             permalink: item.permalink 
           },
+          isPost: item.isPost || false,
+          parentId: item.parentId,
           createdAt: item.timestamp
         })));
       } catch (e: any) {

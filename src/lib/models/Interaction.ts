@@ -30,6 +30,8 @@ export interface IInteraction extends Document {
     postedStatus: "pending" | "posted" | "failed";
     assignedTo?: string;
   };
+  isPost?: boolean;
+  parentId?: string;
   replies: {
     aiSuggested?: string;
     actual?: string;
@@ -69,6 +71,8 @@ const InteractionSchema: Schema = new Schema({
     postedStatus: { type: String, enum: ["pending", "posted", "failed"], default: "pending" },
     assignedTo: String,
   },
+  isPost: { type: Boolean, default: false },
+  parentId: { type: String, index: true },
   replies: {
     aiSuggested: String,
     actual: String,
