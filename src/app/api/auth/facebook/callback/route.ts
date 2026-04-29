@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
         facebookPageId: firstPage.id,
         facebookPageName: firstPage.name,
         facebookPageToken: firstPage.accessToken,
+        facebookConnected: true,
         pages: pages,
         selectedPageId: firstPage.id,
         brandId: "brand_1",

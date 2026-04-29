@@ -8,6 +8,7 @@ export interface IMetaCredential extends Document {
   facebookPageId?: string;
   facebookPageName?: string;
   facebookPageToken?: string;
+  facebookConnected?: boolean;
   connectedAt?: Date;
   pages: Array<{
     id: string;
@@ -29,6 +30,7 @@ const MetaCredentialSchema: Schema = new Schema({
   facebookPageId: { type: String },
   facebookPageName: { type: String },
   facebookPageToken: { type: String },
+  facebookConnected: { type: Boolean, default: false },
   connectedAt: { type: Date, default: Date.now },
   pages: [{
     id: { type: String },

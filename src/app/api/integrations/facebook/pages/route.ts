@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ 
       connected: true,
       pages: credential.pages,
-      selectedPageId: credential.selectedPageId,
+      selectedPageId: credential.facebookPageId || credential.selectedPageId,
       selectedInstagramId: credential.selectedInstagramId
     });
 
@@ -35,7 +35,17 @@ export async function POST(req: NextRequest) {
     }
 
     const update: any = {};
-    if (pageId) update.selectedPageId = pageId;
+    if (pageId) {
+      update.selectedPageId = pageId;
+      update.facebookPageId = pageId;
+      
+      const credential = await MetaCredential.findOne({ tenantId });
+      const page = credential?.pages?.find((p: any) => p.id === pageId);
+      if (page) {
+        update.facebookPageName = page.name;
+        update.facebookPageToken = page.accessToken;
+      }
+    }
     if (instagramId) update.selectedInstagramId = instagramId;
 
     await MetaCredential.findOneAndUpdate(
