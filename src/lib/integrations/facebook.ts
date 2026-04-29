@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_VERSION = "v17.0";
+const API_VERSION = "v16.0";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
@@ -58,8 +58,8 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // Use /published_posts instead of /feed to only get posts by the page, which avoids needing pages_read_user_content
-  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/published_posts`, {
+  // Use /posts as it is the most standard endpoint for reading a page's own content
+  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/posts`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,message,created_time,permalink_url,comments{id,message,created_time}",
