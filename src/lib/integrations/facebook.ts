@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_VERSION = "v12.0";
+const API_VERSION = "v18.0";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
@@ -14,7 +14,7 @@ export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
     "business_management"
   ];
 
-  return `https://www.facebook.com/${API_VERSION}/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes.join(",")}&response_type=code`;
+  return `https://www.facebook.com/${API_VERSION}/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes.join(",")}&response_type=code&auth_type=rerequest`;
 };
 
 export const exchangeCodeForFacebookToken = async (code: string, appId: string, appSecret: string, redirectUri: string) => {
