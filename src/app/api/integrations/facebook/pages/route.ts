@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ 
       connected: true,
-      pages: credential.pages,
+      pages: credential.facebookPages || credential.pages || [],
       selectedPageId: credential.facebookPageId || credential.selectedPageId,
       selectedInstagramId: credential.selectedInstagramId
     });
