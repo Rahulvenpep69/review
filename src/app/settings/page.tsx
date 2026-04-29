@@ -292,7 +292,7 @@ export default function SettingsPage() {
                       onClick={async () => {
                         try {
                           const route = "/api/integrations/facebook/sync";
-                          const res = await axios.post(route, { tenantId: "tenant_1" });
+                          const res = await axios.post(route, { tenantId: "tenant_1", platform: item.id });
                           const debugInfo = res.data.debug ? JSON.stringify(res.data.debug) : "";
                           alert(`Sync Complete! Found ${res.data.count} items.\nDebug: ${debugInfo}`);
                           window.location.reload();

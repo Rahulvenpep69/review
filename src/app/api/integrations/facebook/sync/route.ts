@@ -8,7 +8,7 @@ import { analyzeInteraction } from "@/lib/ai-engine";
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const { tenantId } = await req.json();
+    const { tenantId, platform } = await req.json();
 
     const credential = await MetaCredential.findOne({ tenantId });
     if (!credential || !credential.selectedPageId) {
@@ -28,8 +28,9 @@ export async function POST(req: NextRequest) {
     let igError = null;
 
     // 1. Fetch Facebook (Posts + Comments + Feed)
-    try {
-      const fbData = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
+    if (!platform || platform === "facebook") {
+      try {
+        const fbData = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
       allNormalizedInteractions.push(...fbData.map((item: any) => ({
         platform: "facebook",
         externalId: item.id,
@@ -44,12 +45,13 @@ export async function POST(req: NextRequest) {
         parentId: item.parentId,
         createdAt: item.created_time
       })));
-    } catch (e: any) {
-      fbError = e.response?.data?.error?.message || e.message;
+      } catch (e: any) {
+        fbError = e.response?.data?.error?.message || e.message;
+      }
     }
 
     // 2. Fetch Instagram (Media + Comments)
-    if (credential.selectedInstagramId) {
+    if (credential.selectedInstagramId && (!platform || platform === "instagram")) {
       try {
         const igData = await fetchInstagramComments(credential.selectedInstagramId, selectedPage.accessToken);
         allNormalizedInteractions.push(...igData.map((item: any) => ({
