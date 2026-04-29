@@ -58,8 +58,8 @@ export const fetchFacebookPages = async (userAccessToken: string) => {
 };
 
 export const fetchFacebookComments = async (pageId: string, pageAccessToken: string) => {
-  // Use /posts as it is the most standard endpoint for reading a page's own content
-  const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${pageId}/posts`, {
+  // Use v12.0 for Facebook specifically as it is more lenient with permissions for own pages
+  const res = await axios.get(`https://graph.facebook.com/v12.0/${pageId}/posts`, {
     params: {
       access_token: pageAccessToken,
       fields: "id,message,created_time,permalink_url,comments{id,message,created_time}",
