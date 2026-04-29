@@ -30,9 +30,7 @@ export async function POST(req: NextRequest) {
     // 1. Fetch Facebook (Posts + Comments + Feed)
     if (!platform || platform === "facebook") {
       try {
-        // Use the main credential.accessToken (User Token) instead of the page-specific token
-        // This often bypasses the #10 permission error for restricted pages
-        const fbData = await fetchFacebookComments(selectedPage.id, credential.accessToken);
+        const fbData = await fetchFacebookComments(selectedPage.id, selectedPage.accessToken);
       allNormalizedInteractions.push(...fbData.map((item: any) => ({
         platform: "facebook",
         externalId: item.id,
