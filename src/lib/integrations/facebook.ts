@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_VERSION = "v16.0";
+const API_VERSION = "v23.0";
+const CONFIG_ID = "1920585538603976";
 
 export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
   const scopes = [
@@ -14,7 +15,7 @@ export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
     "business_management"
   ];
 
-  return `https://www.facebook.com/${API_VERSION}/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes.join(",")}&response_type=code&auth_type=reauthenticate`;
+  return `https://www.facebook.com/${API_VERSION}/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&config_id=${CONFIG_ID}&response_type=code&auth_type=reauthenticate`;
 };
 
 export const exchangeCodeForFacebookToken = async (code: string, appId: string, appSecret: string, redirectUri: string) => {
@@ -151,6 +152,6 @@ export const loginWithFacebookSdk = (scopes: string[]) => {
       } else {
         reject(new Error("User cancelled login or did not fully authorize."));
       }
-    }, { scope: scopes.join(','), auth_type: 'reauthenticate' });
+    }, { config_id: CONFIG_ID, auth_type: 'reauthenticate' });
   });
 };
