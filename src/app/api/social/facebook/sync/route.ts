@@ -12,7 +12,21 @@ export async function POST(req: NextRequest) {
 
     const credential = await MetaCredential.findOne({ tenantId });
     
-    // 1. Validate Connection - DIRECTLY from MongoDB
+    // 1. Validate Connection - DIRECTLY from MongoDB (with fallback for legacy)
+    if (!credential || !credential.facebookConnected) {
+      // Fallback: Check if we have pages and a selection from the old system
+      if (credential && credential.pages?.length && credential.selectedPageId) {
+        const legacyPage = credential.pages.find((p: any) => p.id === credential.selectedPageId);
+        if (legacyPage) {
+          credential.facebookPageId = legacyPage.id;
+          credential.facebookPageName = legacyPage.name;
+          credential.facebookPageToken = legacyPage.accessToken;
+          credential.facebookConnected = true;
+          await credential.save();
+        }
+      }
+    }
+
     if (!credential || !credential.facebookConnected || !credential.facebookPageToken) {
       return NextResponse.json({ 
         error: "Facebook Page not connected. Please reconnect." 
