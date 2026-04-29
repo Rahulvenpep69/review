@@ -75,6 +75,26 @@ export default function InboxPage() {
     }, 1500);
   };
 
+  const handleSendReply = async () => {
+    if (!selectedReview || !replyText.trim()) return;
+    
+    setLoading(true);
+    try {
+      await axios.post("/api/interactions/reply", {
+        tenantId: "tenant_1",
+        interactionId: selectedReview._id,
+        text: replyText
+      });
+      alert("Reply sent successfully!");
+      setReplyText("");
+      fetchData(); // Refresh to show the new reply
+    } catch (error: any) {
+      alert("Failed to send reply: " + (error.response?.data?.error || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && reviews.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -351,8 +371,13 @@ export default function InboxPage() {
                       <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                     </button>
                   </div>
-                  <button className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold premium-gradient shadow-lg shadow-primary/20 hover:opacity-90 transition-all active:scale-95">
-                    <Send className="w-4 h-4" /> Send Reply
+                  <button 
+                    onClick={handleSendReply}
+                    disabled={loading || !replyText.trim()}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold premium-gradient shadow-lg shadow-primary/20 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Send Reply
                   </button>
                 </div>
               </div>
