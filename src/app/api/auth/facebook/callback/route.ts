@@ -31,12 +31,16 @@ export async function GET(req: NextRequest) {
       userAccessToken = await exchangeCodeForFacebookToken(code, config.metaAppId, config.metaAppSecret, redirectUri);
     }
     
+    if (!userAccessToken) {
+      throw new Error("Failed to obtain Facebook Access Token");
+    }
+    
     console.log("USER_TOKEN:", userAccessToken.substring(0, 10) + "...");
 
     // 2. Fetch /me/accounts to get Page Tokens
     console.log("Fetching pages and page tokens...");
     const pages = await fetchFacebookPages(userAccessToken);
-    console.log("PAGES RESPONSE:", JSON.stringify(pages.map(p => ({ name: p.name, id: p.id }))));
+    console.log("PAGES RESPONSE:", JSON.stringify(pages.map((p: any) => ({ name: p.name, id: p.id }))));
 
     if (pages.length === 0) {
        return NextResponse.redirect(new URL("/settings?error=no_pages", req.url));
