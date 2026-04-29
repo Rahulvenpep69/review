@@ -39,9 +39,19 @@ export default function InboxPage() {
       const data = res.data.data;
       setReviews(data);
       if (data.length > 0 && !selectedReview) {
+        // Find first item (comment or post)
         setSelectedReview(data[0]);
         setReplyText(data[0].replies?.aiSuggested || "");
       }
+      
+      // Auto-expand all posts that have comments
+      const postsWithComments = data
+        .filter((r: any) => r.isPost || !r.parentId)
+        .map((p: any) => p.externalId)
+        .filter((id: string) => data.some((c: any) => c.parentId === id));
+        
+      setExpandedPosts(postsWithComments);
+      
     } catch (error) {
       console.error("Fetch Error:", error);
     } finally {

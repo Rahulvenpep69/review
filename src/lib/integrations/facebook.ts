@@ -95,7 +95,7 @@ export const fetchInstagramComments = async (instagramId: string, pageAccessToke
   const res = await axios.get(`https://graph.facebook.com/${API_VERSION}/${instagramId}/media`, {
     params: {
       access_token: pageAccessToken,
-      fields: "id,caption,permalink,timestamp,comments{id,text,username,timestamp}",
+      fields: "id,caption,permalink,timestamp,username,comments{id,text,username,timestamp}",
       limit: 100
     }
   });
