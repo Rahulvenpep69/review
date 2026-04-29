@@ -294,7 +294,7 @@ export default function SettingsPage() {
                           const route = "/api/integrations/facebook/sync";
                           const res = await axios.post(route, { tenantId: "tenant_1", platform: item.id });
                           const debugInfo = res.data.debug ? JSON.stringify(res.data.debug) : "";
-                          alert(`Sync Complete! Found ${res.data.count} items.\nDebug: ${debugInfo}`);
+                          alert(`Sync Complete! Found ${res.data.count} items.\nStatus: FB(${res.data.fbStatus}) IG(${res.data.igStatus})\nDebug: ${debugInfo}`);
                           window.location.reload();
                         } catch (e: any) {
                           alert(`Sync Failed: ${e.response?.data?.error || e.message}`);
