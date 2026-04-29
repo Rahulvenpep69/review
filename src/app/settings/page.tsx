@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
+import { initFacebookSdk, loginWithFacebookSdk } from "@/lib/integrations/facebook";
 
 export default function SettingsPage() {
   const [integrations, setIntegrations] = useState([
@@ -154,6 +155,12 @@ export default function SettingsPage() {
     fetchConfig();
   }, []);
 
+  useEffect(() => {
+    if (metaConfig.appId) {
+      initFacebookSdk(metaConfig.appId);
+    }
+  }, [metaConfig.appId]);
+
   const handleConnect = async (id: string) => {
     const item = integrations.find(i => i.id === id);
     const isConnected = item?.status === "connected";
@@ -177,10 +184,22 @@ export default function SettingsPage() {
         return;
       }
       try {
-        const res = await axios.get("/api/integrations/facebook/auth?tenantId=tenant_1");
-        if (res.data.url) window.location.href = res.data.url;
+        const authResponse: any = await loginWithFacebookSdk([
+          "public_profile",
+          "email",
+          "pages_show_list",
+          "pages_read_engagement",
+          "pages_manage_metadata",
+          "instagram_basic",
+          "instagram_manage_comments",
+          "business_management"
+        ]);
+        
+        // After successful popup login, we can either use the token directly
+        // or redirect to the callback with the token to reuse existing backend logic
+        window.location.href = `/api/auth/callback/facebook?manual_token=${authResponse.accessToken}`;
       } catch (error: any) {
-        alert(error.response?.data?.error || "Check Meta Auth settings");
+        alert(error.message || "Check Meta Auth settings");
         setShowMetaModal(true);
       }
     }

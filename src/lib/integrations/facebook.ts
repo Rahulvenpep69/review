@@ -120,3 +120,37 @@ export const fetchInstagramComments = async (instagramId: string, pageAccessToke
 
   return results;
 };
+
+export const initFacebookSdk = (appId: string) => {
+  return new Promise((resolve) => {
+    (window as any).fbAsyncInit = function() {
+      (window as any).FB.init({
+        appId      : appId,
+        cookie     : true,
+        xfbml      : true,
+        version    : API_VERSION
+      });
+      resolve(true);
+    };
+
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s) as HTMLScriptElement; js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js";
+      fjs.parentNode?.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+  });
+};
+
+export const loginWithFacebookSdk = (scopes: string[]) => {
+  return new Promise((resolve, reject) => {
+    (window as any).FB.login((response: any) => {
+      if (response.authResponse) {
+        resolve(response.authResponse);
+      } else {
+        reject(new Error("User cancelled login or did not fully authorize."));
+      }
+    }, { scope: scopes.join(','), auth_type: 'reauthenticate' });
+  });
+};

@@ -8,11 +8,6 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const tenantId = "tenant_1"; 
-
-  if (!code) {
-    return NextResponse.redirect(new URL("/settings?error=no_code", req.url));
-  }
-
   try {
     await dbConnect();
     
@@ -21,10 +16,18 @@ export async function GET(req: NextRequest) {
       throw new Error("Meta App ID/Secret missing during callback");
     }
 
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/facebook`;
+    const manualToken = searchParams.get("manual_token");
+    let longAccessToken = "";
 
-    // 1. Exchange code for long-lived access token
-    const longAccessToken = await exchangeCodeForFacebookToken(code, config.metaAppId, config.metaAppSecret, redirectUri);
+    if (manualToken) {
+      longAccessToken = manualToken;
+    } else if (code) {
+      const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/facebook`;
+      // 1. Exchange code for long-lived access token
+      longAccessToken = await exchangeCodeForFacebookToken(code, config.metaAppId, config.metaAppSecret, redirectUri);
+    } else {
+       return NextResponse.redirect(new URL("/settings?error=no_code", req.url));
+    }
     
     // 2. Fetch available pages and their Instagram links
     const pages = await fetchFacebookPages(longAccessToken);
