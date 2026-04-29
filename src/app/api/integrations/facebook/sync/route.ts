@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Process and Save
     let savedCount = 0;
+    let updatedCount = 0;
     for (const item of allNormalizedInteractions) {
       const existing = await Interaction.findOne({ externalId: item.externalId });
       if (!existing) {
@@ -93,6 +94,21 @@ export async function POST(req: NextRequest) {
         });
         await newInteraction.save();
         savedCount++;
+      } else {
+        // Update existing with the new hierarchy fields
+        let needsUpdate = false;
+        if (existing.isPost !== item.isPost) {
+          existing.isPost = item.isPost;
+          needsUpdate = true;
+        }
+        if (existing.parentId !== item.parentId) {
+          existing.parentId = item.parentId;
+          needsUpdate = true;
+        }
+        if (needsUpdate) {
+          await existing.save();
+          updatedCount++;
+        }
       }
     }
 
@@ -103,6 +119,7 @@ export async function POST(req: NextRequest) {
       success: true, 
       count: allNormalizedInteractions.length,
       saved: savedCount,
+      updated: updatedCount,
       fbStatus: fbError ? `Error: ${fbError}` : "Success",
       igStatus: igError ? `Error: ${igError}` : "Success",
       debug: {
