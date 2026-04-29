@@ -3,7 +3,12 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IMetaCredential extends Document {
   tenantId: string;
   brandId: string;
-  accessToken: string;
+  accessToken: string; // User Access Token
+  facebookUserToken?: string;
+  facebookPageId?: string;
+  facebookPageName?: string;
+  facebookPageToken?: string;
+  connectedAt?: Date;
   pages: Array<{
     id: string;
     name: string;
@@ -20,6 +25,11 @@ const MetaCredentialSchema: Schema = new Schema({
   tenantId: { type: String, required: true, unique: true },
   brandId: { type: String, required: true },
   accessToken: { type: String, required: true }, // Long-lived User Access Token
+  facebookUserToken: { type: String },
+  facebookPageId: { type: String },
+  facebookPageName: { type: String },
+  facebookPageToken: { type: String },
+  connectedAt: { type: Date, default: Date.now },
   pages: [{
     id: { type: String },
     name: { type: String },

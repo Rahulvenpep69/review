@@ -187,20 +187,10 @@ export default function SettingsPage() {
         return;
       }
       try {
-        const authResponse: any = await loginWithFacebookSdk([
-          "public_profile",
-          "email",
-          "pages_show_list",
-          "pages_read_engagement",
-          "pages_manage_metadata",
-          "instagram_basic",
-          "instagram_manage_comments",
-          "business_management"
-        ]);
+        const authResponse: any = await loginWithFacebookSdk([]);
         
-        // After successful popup login, we can either use the token directly
-        // or redirect to the callback with the token to reuse existing backend logic
-        window.location.href = `/api/auth/callback/facebook?manual_token=${authResponse.accessToken}`;
+        // Use the new production callback path
+        window.location.href = `/api/auth/facebook/callback?manual_token=${authResponse.accessToken}`;
       } catch (error: any) {
         alert(error.message || "Check Meta Auth settings");
         setShowMetaModal(true);
@@ -319,10 +309,9 @@ export default function SettingsPage() {
                     <button 
                       onClick={async () => {
                         try {
-                          const route = "/api/integrations/facebook/sync";
-                          const res = await axios.post(route, { tenantId: "tenant_1", platform: item.id });
-                          const debugInfo = res.data.debug ? JSON.stringify(res.data.debug) : "";
-                          alert(`Sync Complete! Found ${res.data.count} items.\nStatus: FB(${res.data.fbStatus}) IG(${res.data.igStatus})\nDebug: ${debugInfo}`);
+                          const route = "/api/social/facebook/sync";
+                          const res = await axios.post(route, { tenantId: "tenant_1" });
+                          alert(`Sync Complete! Found ${res.data.fbFound} items on ${res.data.pageName}.\nStatus: ${res.data.status}`);
                           window.location.reload();
                         } catch (e: any) {
                           alert(`Sync Failed: ${e.response?.data?.error || e.message}`);
