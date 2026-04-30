@@ -15,7 +15,7 @@ export const getFacebookAuthUrl = (appId: string, redirectUri: string) => {
     "business_management"
   ];
 
-  return `https://www.facebook.com/${API_VERSION}/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&config_id=${CONFIG_ID}&scope=${scopes.join(",")}&response_type=code&auth_type=reauthenticate`;
+  return `https://www.facebook.com/${API_VERSION}/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes.join(",")}&response_type=code&auth_type=reauthenticate`;
 };
 
 export const exchangeCodeForFacebookToken = async (code: string, appId: string, appSecret: string, redirectUri: string) => {

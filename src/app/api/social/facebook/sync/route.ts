@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
     let allInteractions: any[] = [];
     
     try {
-      // Fetch Feed/Posts
-      const feedRes = await axios.get(`https://graph.facebook.com/v20.0/${pageId}/feed`, {
+      // Fetch Posts instead of Feed
+      const feedRes = await axios.get(`https://graph.facebook.com/v20.0/${pageId}/posts`, {
         params: {
           access_token: pageToken,
           fields: "id,message,created_time,permalink_url,from,comments{id,message,created_time,from}"
