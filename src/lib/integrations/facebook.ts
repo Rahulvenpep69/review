@@ -146,12 +146,23 @@ export const initFacebookSdk = (appId: string) => {
 
 export const loginWithFacebookSdk = (scopes: string[]) => {
   return new Promise((resolve, reject) => {
+    const requiredScopes = [
+      "public_profile",
+      "email",
+      "pages_show_list",
+      "pages_read_engagement",
+      "pages_manage_metadata",
+      "instagram_basic",
+      "instagram_manage_comments",
+      "business_management"
+    ].join(",");
+
     (window as any).FB.login((response: any) => {
       if (response.authResponse) {
         resolve(response.authResponse);
       } else {
         reject(new Error("User cancelled login or did not fully authorize."));
       }
-    }, { config_id: CONFIG_ID, auth_type: 'reauthenticate' });
+    }, { scope: requiredScopes, auth_type: 'reauthenticate' });
   });
 };
